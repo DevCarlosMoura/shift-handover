@@ -1,0 +1,16 @@
+node_modules/
+coverage/
+data/
+backups/
+logs/
+.env
+.env.*
+!.env.example
+settings.json
+secrets.dpapi*
+jira-sessions.dpapi*
+*.log
+*.zip
+*.tmp
+.DS_Store
+Thumbs.db

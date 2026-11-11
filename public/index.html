@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#11141a">
+    <meta name="description" content="Passagem de turno com rascunhos, chamados do Jira e integração com Google Chat.">
+    <title>Shift Handover</title>
+    <link rel="stylesheet" href="styles.css?v=1">
+    <script src="runtime-config.js" defer></script>
+    <script src="jira-merge.js" defer></script>
+    <script src="form-state.js?v=1" defer></script>
+    <script src="draft-reference.js?v=1" defer></script>
+    <script src="app.js?v=1" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#topo" aria-label="Shift Handover" data-app-aria>
+          <span class="brand-logo-card"><img src="assets/shift-mark.svg" alt="Símbolo de passagem de turno"></span>
+          <span class="brand-copy">
+            <strong class="brand-name" data-app-name>Shift Handover</strong>
+            <small class="brand-team" data-team-name>Sua equipe</small>
+          </span>
+        </a>
+
+        <div class="sidebar-rule"></div>
+        <div class="workspace-label"><span class="live-dot"></span> OPERAÇÃO INTERNA</div>
+
+        <p class="nav-caption">PASSAGEM DE TURNO</p>
+        <nav class="nav-list" aria-label="Seções da passagem">
+          <a class="nav-link active" href="#identificacao"><span class="nav-icon">01</span><span>Identificação</span></a>
+          <a class="nav-link" href="#metricas"><span class="nav-icon">02</span><span>Métricas do turno</span></a>
+          <a class="nav-link" href="#atividades"><span class="nav-icon">03</span><span>Atividades</span></a>
+          <a class="nav-link" href="#intercorrencias"><span class="nav-icon">04</span><span>Intercorrências</span></a>
+          <a class="nav-link" href="#pendencias"><span class="nav-icon">05</span><span>Pendências</span></a>
+          <a class="nav-link" href="#comunicados"><span class="nav-icon">06</span><span>Comunicados</span></a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="sidebar-callout">
+            <span class="callout-icon" aria-hidden="true">↗</span>
+            <div><strong>O próximo turno começa aqui.</strong><p>Contexto claro. Operação contínua.</p></div>
+          </div>
+          <div class="sidebar-profile">
+            <span class="profile-avatar">SH</span>
+            <span><strong data-team-name>Sua equipe</strong><small>Passagem de turno</small></span>
+            <button class="profile-menu" id="profile-menu-button" type="button" aria-label="Abrir opções" aria-haspopup="menu" aria-expanded="false">•••</button>
+          </div>
+          <div class="utility-menu" id="utility-menu" role="menu" aria-label="Opções da aplicação" hidden>
+            <button type="button" role="menuitem" data-open-dialog="records-dialog"><span>01</span> Registros</button>
+            <button type="button" role="menuitem" data-open-dialog="help-dialog"><span>02</span> Como funciona?</button>
+            <button type="button" role="menuitem" data-open-dialog="preview-dialog"><span>03</span> Prévia do Google Chat</button>
+          </div>
+          <div class="local-mode"><span></span> Rascunhos e passagens no servidor</div>
+        </div>
+      </aside>
+
+      <main class="main-content" id="topo">
+        <header class="topbar">
+          <div class="breadcrumbs"><span>Operações</span><b>/</b><strong>Passagem de turno</strong></div>
+          <div class="topbar-right">
+            <span class="connection-pill" id="connection-status"><i></i> Verificando integração</span>
+            <span class="topbar-date" id="today-label">—</span>
+          </div>
+        </header>
+
+        <section class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow"><span></span> SHIFT HANDOVER <b>·</b> <span data-team-name>Sua equipe</span></div>
+            <h1>Seu turno termina.<br><em>O fluxo continua.</em></h1>
+            <p>Deixe o próximo time pronto para agir. Registre o que aconteceu, o que ficou em aberto e tudo que merece atenção.</p>
+            <div class="hero-meta"><span class="hero-meta-icon">✳</span><span>Uma mensagem completa, pronta para o espaço do time.</span></div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="art-ring ring-one"></div><div class="art-ring ring-two"></div><div class="art-glow"></div>
+            <div class="art-card art-card-back"><span class="art-line long"></span><span class="art-line"></span><span class="art-line short"></span></div>
+            <div class="art-card art-card-front">
+              <div class="art-card-top"><span class="art-check">✓</span><span>CONTEXTO ALINHADO</span><span class="art-spark">✳</span></div>
+              <div class="art-card-title">Próximo turno<br>no ritmo certo.</div>
+              <div class="art-card-bottom"><span>TIME / TURNO</span><span class="art-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
+            </div>
+            <span class="art-orbit orbit-a"></span><span class="art-orbit orbit-b"></span>
+          </div>
+        </section>
+
+        <div class="content-grid">
+          <form id="handoff-form" class="form-column" novalidate>
+            <section class="form-section" id="identificacao">
+              <div class="section-heading">
+                <div class="section-number">01</div>
+                <div><p class="section-kicker">IDENTIFICAÇÃO</p><h2>Quem está passando o turno?</h2><p class="section-subtitle">Identifique a pessoa responsável e o período da operação.</p></div>
+                <span class="section-complete">Obrigatório</span>
+              </div>
+              <div class="field-grid three">
+                <label class="field"><span>Responsável <b>*</b></span><input name="responsavel" type="text" placeholder="Nome de quem está no turno" autocomplete="name" required></label>
+                <label class="field"><span>Turno <b>*</b></span><input name="turno" type="text" placeholder="Ex.: Manhã" required></label>
+                <label class="field"><span>Data <b>*</b></span><input name="data" id="handoff-date" type="date" required></label>
+              </div>
+            </section>
+
+            <section class="form-section" id="metricas">
+              <div class="section-heading">
+                <div class="section-number">02</div>
+                <div><p class="section-kicker">MÉTRICAS DE TURNO</p><h2>Como foi a operação?</h2><p class="section-subtitle">Um retrato rápido da saúde do turno e dos chamados.</p></div>
+              </div>
+              <div class="field-grid two">
+                <label class="field"><span>Estado geral de funcionamento</span><span class="select-wrap"><select name="estadoGeral"><option value="">Selecione o estado</option><option>Normal</option><option>Atenção</option><option>Instabilidade</option></select><span class="select-chevron">⌄</span></span></label>
+                <label class="field"><span>Quantidade servida</span><input name="quantidadeServida" type="text" inputmode="decimal" placeholder="Ex.: 1.240 ou —"></label>
+                <label class="field"><span>Chamados finalizados · automático</span><input name="chamadosResolvidos" type="number" min="0" value="0" readonly aria-label="Quantidade de chamados finalizados"></label>
+                <label class="field"><span>Chamados pendentes · automático</span><input name="chamadosPendentes" type="number" min="0" value="0" readonly aria-label="Quantidade de chamados pendentes"></label>
+              </div>
+              <div class="jira-import-tools">
+                <div class="jira-import-title"><strong id="jira-filter-heading">Jira</strong><p id="jira-status" role="status">Verificando conexão com o Jira…</p></div>
+                <div class="jira-import-actions">
+                  <button class="jira-button" id="connect-jira" type="button" disabled>Conectar Jira</button>
+                  <button class="jira-button jira-import-button" id="import-jira" type="button" disabled>↓ Importar do Jira</button>
+                  <button class="jira-disconnect" id="disconnect-jira" type="button" hidden>Desconectar</button>
+                </div>
+                <p class="ticket-hint">Pendentes atuais e finalizados na data da ficha, no horário do perfil Jira. Os números ficam em um rascunho para revisão.</p>
+              </div>
+              <div class="ticket-groups">
+                <div class="ticket-field">
+                  <div class="ticket-field-heading"><span id="ticket-heading">Chamados finalizados</span><span class="ticket-count" id="ticket-count">0</span></div>
+                  <label class="ticket-search"><span>Buscar nos finalizados</span><input id="ticket-search" type="search" placeholder="Buscar por número" autocomplete="off" spellcheck="false" aria-controls="ticket-list"></label>
+                  <div class="ticket-list" id="ticket-list" role="group" aria-labelledby="ticket-heading" aria-describedby="ticket-results" tabindex="0"></div>
+                  <p class="ticket-filter-empty" id="ticket-empty" hidden>Nenhum chamado corresponde à busca.</p>
+                  <div class="ticket-list-footer"><p class="ticket-results" id="ticket-results" role="status" aria-live="polite"></p><button class="add-ticket" id="add-ticket" type="button"><span>＋</span> Adicionar finalizado</button></div>
+                  <p class="ticket-hint">Registre os chamados concluídos durante o turno.</p>
+                </div>
+                <div class="ticket-field">
+                  <div class="ticket-field-heading"><span id="pending-ticket-heading">Chamados pendentes</span><span class="ticket-count" id="pending-ticket-count">0</span></div>
+                  <label class="ticket-search"><span>Buscar nos pendentes</span><input id="pending-ticket-search" type="search" placeholder="Buscar por número" autocomplete="off" spellcheck="false" aria-controls="pending-ticket-list"></label>
+                  <div class="ticket-list" id="pending-ticket-list" role="group" aria-labelledby="pending-ticket-heading" aria-describedby="pending-ticket-results" tabindex="0"></div>
+                  <p class="ticket-filter-empty" id="pending-ticket-empty" hidden>Nenhum chamado corresponde à busca.</p>
+                  <div class="ticket-list-footer"><p class="ticket-results" id="pending-ticket-results" role="status" aria-live="polite"></p><button class="add-ticket" id="add-pending-ticket" type="button"><span>＋</span> Adicionar pendente</button></div>
+                  <p class="ticket-hint">Use ✓ para mover um chamado resolvido para finalizados.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="form-section section-compact" id="atividades">
+              <div class="section-heading">
+                <div class="section-number">03</div>
+                <div><p class="section-kicker">ROTINA DO TURNO</p><h2>O que foi executado?</h2><p class="section-subtitle">Registre as entregas, validações e atualizações mais importantes.</p></div>
+              </div>
+              <div class="section-body">
+                <div class="field-grid two">
+                  <label class="field"><span>Serviços / processos acompanhados</span><input name="servicosAcompanhados" type="text" placeholder="Ex.: acompanhamento do sistema e verificações diárias"></label>
+                  <label class="field"><span>Atualizações técnicas</span><input name="atualizacaoHH" type="text" placeholder="Ex.: atualizações realizadas ou nenhuma atualização"></label>
+                </div>
+                <label class="field field-spaced"><span>Principais atividades executadas</span><textarea name="principaisAtividades" rows="5" placeholder="Conte o que aconteceu durante o turno. Uma atividade por linha ajuda na leitura."></textarea><small class="field-hint">Inclua acompanhamentos, ajustes, calibrações e validações.</small></label>
+              </div>
+            </section>
+
+            <section class="form-section section-compact" id="intercorrencias">
+              <div class="section-heading">
+                <div class="section-number">04</div>
+                <div><p class="section-kicker">INTERCORRÊNCIAS OPERACIONAIS</p><h2>O que precisa de atenção?</h2><p class="section-subtitle">Dê visibilidade a riscos, instabilidades e pontos de atenção.</p></div>
+              </div>
+              <div class="section-body">
+                <div class="field-grid two">
+                  <label class="field"><span>Instabilidade do sistema / infraestrutura</span><textarea name="instabilidade" rows="3" placeholder="Descreva a instabilidade ou informe que não houve."></textarea></label>
+                  <label class="field"><span>Equipamentos afetados e situação</span><textarea name="equipamentosImpactados" rows="3" placeholder="Equipamento, falha, ação realizada e situação atual."></textarea></label>
+                </div>
+                <label class="field field-spaced"><span>Pontos de atenção</span><textarea name="pontosAtencao" rows="2" placeholder="O que o próximo turno precisa observar?"></textarea></label>
+              </div>
+            </section>
+
+            <section class="form-section section-compact" id="pendencias">
+              <div class="section-heading">
+                <div class="section-number">05</div>
+                <div><p class="section-kicker">PRÓXIMA ETAPA</p><h2>O que ficou para acompanhar?</h2><p class="section-subtitle">Passe o bastão com o próximo passo de cada pendência.</p></div>
+              </div>
+              <div class="section-body">
+                <div class="field-grid two">
+                  <label class="field"><span>Tarefas agendadas</span><textarea name="tarefasAgendadas" rows="2" placeholder="O que está previsto para a próxima etapa?"></textarea></label>
+                  <label class="field"><span>Responsável pelo próximo passo</span><input name="responsavelProximaEtapa" type="text" placeholder="Pessoa ou equipe que fará o acompanhamento"></label>
+                </div>
+                <label class="field field-spaced"><span>Bilhetes e próximos passos dos chamados</span><textarea name="proximosPassos" rows="3" placeholder="Chamado, o que falta resolver e a próxima ação esperada."></textarea></label>
+              </div>
+            </section>
+
+            <section class="form-section section-compact" id="comunicados">
+              <div class="section-heading">
+                <div class="section-number">06</div>
+                <div><p class="section-kicker">COMUNICAÇÃO ENTRE TURNOS</p><h2>O que mais o time precisa saber?</h2><p class="section-subtitle">Avisos, notificações e mudanças em equipamentos ou processos.</p></div>
+              </div>
+              <div class="section-body">
+                <label class="field"><span>Gestão de avisos / alterações em equipamentos</span><textarea name="comunicados" rows="3" placeholder="Compartilhe comunicados importantes para o próximo turno."></textarea></label>
+              </div>
+            </section>
+
+            <div class="submit-row">
+              <div class="submit-note"><span class="secure-icon">↗</span><span>Salve durante o turno. Envie a passagem ao Chat quando terminar de preencher.</span></div>
+              <div class="submit-actions">
+                <button class="save-draft-button" id="save-draft" type="button">Salvar rascunho</button>
+                <button class="submit-button" type="submit"><span>Enviar passagem</span><span class="submit-arrow" aria-hidden="true">→</span></button>
+              </div>
+              <p class="draft-status" id="draft-status" role="status" aria-live="polite">Você pode salvar só os chamados e completar o restante depois.</p>
+            </div>
+          </form>
+        </div>
+        <footer class="page-footer"><span data-app-name>Shift Handover</span><span>Feito para manter a operação em movimento <b>✳</b></span></footer>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-message"></span><button id="toast-close" type="button" aria-label="Fechar aviso">×</button></div>
+
+    <dialog class="app-dialog" id="records-dialog" aria-labelledby="records-title">
+      <div class="dialog-shell">
+        <header class="dialog-header"><div><p class="section-kicker">HISTÓRICO</p><h2 id="records-title">Registros de passagem</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button></header>
+        <div class="dialog-content">
+          <div class="records-toolbar"><p id="records-count">Carregando registros…</p><label>Exibir<select id="records-type-filter"><option value="all">Todos</option><option value="draft">Rascunhos</option><option value="submitted">Concluídas</option></select></label><label>Filtrar por data<input type="date" id="records-date-filter"></label><button class="secondary-button" id="clear-record-filter" type="button">Limpar</button></div>
+          <div class="records-list" id="records-list" aria-live="polite"></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="app-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-shell">
+        <header class="dialog-header"><div><p class="section-kicker">GUIA RÁPIDO</p><h2 id="help-title">Como funciona?</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button></header>
+        <div class="dialog-content help-content">
+          <section><span class="help-step">01</span><div><h3>Registre os chamados durante o turno</h3><p>Separe os números dos chamados finalizados e pendentes. As quantidades são calculadas pelas listas; use ✓ para mover um pendente que foi concluído.</p></div></section>
+          <section><span class="help-step">02</span><div><h3>Salve sem enviar</h3><p>Salvar rascunho aceita uma ficha incompleta, até somente os chamados. Essa ação grava seus dados e não dispara mensagem no Google Chat.</p></div></section>
+          <section><span class="help-step">03</span><div><h3>Continue de onde parou</h3><p>No menu dos três pontos, abra Registros, filtre por Rascunhos e escolha Continuar preenchimento. Cada salvamento atualiza a mesma ficha.</p></div></section>
+          <section><span class="help-step">04</span><div><h3>Envie no fim do turno</h3><p>Complete responsável, turno, data e as demais informações. Ao clicar em Enviar passagem, o servidor registra a ficha final e publica a mensagem completa no Chat quando o webhook está conectado.</p></div></section>
+          <section><span class="help-step">05</span><div><h3>Importe seus chamados do Jira</h3><p>Conecte sua conta do Jira e use Importar do Jira na seção Métricas. A busca usa o projeto e o filtro configurados para esta instalação, além da data da ficha. Finalizados e pendentes ficam separados; suas anotações são preservadas e a ficha é salva como rascunho. Essa ação não publica no Chat.</p></div></section>
+          <div class="help-note"><strong>Sobre esta versão</strong><p>O aplicativo grava os registros no servidor. Uma instalação compartilhada precisa de acesso autenticado, HTTPS e armazenamento persistente. As integrações são configuradas pelo responsável pela instalação.</p></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="app-dialog" id="preview-dialog" aria-labelledby="preview-title">
+      <div class="dialog-shell">
+        <header class="dialog-header"><div><p class="section-kicker">MENSAGEM FORMATADA</p><h2 id="preview-title">Prévia do Google Chat</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button></header>
+        <div class="dialog-content"><p class="dialog-intro">Esta é a mensagem que será enviada com os dados preenchidos no formulário.</p><pre class="message-preview" id="message-preview"></pre></div>
+      </div>
+    </dialog>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "shift-handover",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevCarlosMoura/shift-handover.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DevCarlosMoura/shift-handover/issues"
+  },
+  "description": "Passagem de turno com rascunhos, Jira Cloud e Google Chat configuráveis por instalação",
+  "scripts": {
+    "start": "node start.js",
+    "configure": "node configure.js",
+    "check": "node check.js",
+    "backup": "node backup.js",
+    "test": "node --test tests/*.test.cjs",
+    "check:syntax": "node scripts/check-syntax.cjs"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
