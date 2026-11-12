@@ -36,7 +36,7 @@ const publicLocation = path.resolve(PUBLIC_DIR).toLowerCase();
 const dataLocation = DATA_DIR.toLowerCase();
 if (dataLocation === publicLocation || dataLocation.startsWith(publicLocation + path.sep)) throw new Error("HANDOFF_DATA_DIR deve ficar fora do diretório público.");
 const HANDOFFS_FILE = path.join(DATA_DIR, "handoffs.json");
-const MAX_BODY_BYTES = 96 * 1024;
+const MAX_BODY_BYTES = 512 * 1024;
 const MAX_CHAT_BYTES = 30000;
 const CHAT_REQUEST_TIMEOUT_MS = 15000;
 const HANDOFF_TEXT_FIELDS = {
@@ -146,6 +146,24 @@ function normalizeTicketList(value, label) {
   return tickets;
 }
 
+function normalizeTicketTitles(value, ticketIds) {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Os títulos dos chamados precisam ser enviados em um objeto por ID.");
+  const allowed = new Set(ticketIds);
+  const titles = {};
+  const seen = new Set();
+  for (const [rawId, rawTitle] of Object.entries(value)) {
+    const id = rawId.trim().toUpperCase();
+    if (!allowed.has(id) || seen.has(id)) throw new Error("Associe cada título a um chamado válido presente na ficha, sem repetir o ID.");
+    seen.add(id);
+    if (typeof rawTitle !== "string") throw new Error("O título do chamado precisa ser um texto de até 255 caracteres.");
+    const title = rawTitle.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+    if (title.length > 255) throw new Error("O título do chamado deve ter no máximo 255 caracteres.");
+    if (title) titles[id] = title;
+  }
+  return titles;
+}
+
 function normalizeHandoffData(input, options = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("Envie os dados do formulário em um objeto JSON.");
@@ -193,6 +211,7 @@ function normalizeHandoffData(input, options = {}) {
 
   data.chamadosAtendidos = finalized;
   data.chamadosPendentesIds = pending;
+  data.chamadosTitulos = normalizeTicketTitles(input.chamadosTitulos, finalized.concat(pending));
   return data;
 }
 
@@ -211,8 +230,13 @@ function buildChatMessage(data) {
   const line = (label, value) => "* " + label + ": " + valueOrDash(value);
   const section = (title, value) =>
     "*" + title + "*\n" + valueOrDash(value);
+  const ticketTitle = (id) => {
+    const value = data.chamadosTitulos && data.chamadosTitulos[id];
+    return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()
+      .replace(/</g, "‹").replace(/>/g, "›").replace(/[\\*_~`]/g, "\\$&") : "";
+  };
   const ticketLines = (tickets) => Array.isArray(tickets) && tickets.length
-    ? tickets.map((ticket) => "• " + ticket).join("\n")
+    ? tickets.map((ticket) => { const title = ticketTitle(ticket); return "• " + ticket + (title ? " — " + title : ""); }).join("\n")
     : "—";
 
   return [
@@ -306,7 +330,15 @@ function conflictForRecord(record, message) {
   });
 }
 
-function saveDraftRecord(id, data, revision) {
+function retainedTicketTitles(previousData, data) {
+  const previous = previousData && previousData.chamadosTitulos;
+  const ids = data.chamadosAtendidos.concat(data.chamadosPendentesIds);
+  const retained = previous && typeof previous === "object" && !Array.isArray(previous)
+    ? Object.fromEntries(ids.filter((id) => Object.hasOwn(previous, id)).map((id) => [id, previous[id]])) : {};
+  return normalizeTicketTitles(retained, ids);
+}
+
+function saveDraftRecord(id, data, revision, preserveMissingTitles = false) {
   return queueHandoffWrite(async () => {
     const records = await readStoredHandoffs();
     const index = records.findIndex((item) => item.id === id);
@@ -326,6 +358,7 @@ function saveDraftRecord(id, data, revision) {
         ? conflictForRecord(existing, "O rascunho mudou em outra sessão. Reabra o registro mais recente antes de salvar.")
         : operationError(409, "O rascunho ainda não existe. Use a revisão zero para criá-lo.", { recordId: id, currentRevision: 0 });
     }
+    if (existing && preserveMissingTitles) data = { ...data, chamadosTitulos: retainedTicketTitles(existing.data, data) };
     const now = new Date().toISOString();
     const record = {
       id,
@@ -368,6 +401,7 @@ function prepareHandoffSubmission(input, metadata, webhookConnected) {
     let data;
     try {
       data = normalizeHandoffData(closed ? existing.data : input, { deriveCounts: !closed });
+      if (!closed && existing && !Object.hasOwn(input, "chamadosTitulos")) data.chamadosTitulos = retainedTicketTitles(existing.data, data);
     } catch (error) {
       throw operationError(400, error.message);
     }
@@ -530,18 +564,19 @@ async function handleRequest(req, res, url) {
       return;
     }
 
-    let id, revision, data;
+    let id, revision, data, preserveMissingTitles;
     try {
       id = clientRecordId(decodeURIComponent(draftRoute[1]));
       if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Envie o rascunho como um objeto JSON.");
       revision = clientRevision(input.revision);
       data = normalizeHandoffData(input.data, { draft: true });
+      preserveMissingTitles = !Object.hasOwn(input.data, "chamadosTitulos");
     } catch (error) {
       sendJson(res, 400, { error: error.message });
       return;
     }
     try {
-      const result = await saveDraftRecord(id, data, revision);
+      const result = await saveDraftRecord(id, data, revision, preserveMissingTitles);
       sendJson(res, 200, { ok: true, record: result.record, revision: result.record.revision, duplicate: result.duplicate });
     } catch (error) {
       sendOperationError(res, error, "Não foi possível gravar o rascunho no histórico.");

@@ -18,14 +18,31 @@
       .map((input) => input.value.trim()).filter(Boolean);
   }
 
+  function cleanTitle(value) {
+    return typeof value === "string" ? value.replace(/[\r\n\t]+/g, " ").trim() : "";
+  }
+
+  function titles() {
+    const result = {};
+    groups.forEach((group) => group.list.querySelectorAll(".ticket-row").forEach((row) => {
+      const number = row.querySelector(".ticket-number").value.trim();
+      const title = cleanTitle(row.querySelector(".ticket-title").value);
+      if (number && title) result[ticketPrefix + "-" + number] = title;
+    }));
+    return result;
+  }
+
   function filterRows(group, focusedElement = document.activeElement) {
-    const query = group.search.value.trim().toUpperCase().replace(searchPrefixStart, "");
+    const query = group.search.value.trim().toUpperCase();
+    const numberQuery = query.replace(searchPrefixStart, "");
     let total = 0;
     let matches = 0;
     let visible = 0;
     group.list.querySelectorAll(".ticket-row").forEach((row) => {
       const value = row.querySelector(".ticket-number").value.trim();
-      const matchesQuery = !query || value.includes(query);
+      const title = row.querySelector(".ticket-title").value.toUpperCase();
+      const matchesQuery = !query || (ticketPrefix + "-" + value).includes(query)
+        || (numberQuery.length > 0 && value.includes(numberQuery)) || title.includes(query);
       if (value) { total += 1; if (matchesQuery) matches += 1; }
       // Keep an edited row available until focus leaves it; filtering never removes data.
       row.hidden = !matchesQuery && !row.contains(focusedElement);
@@ -45,9 +62,12 @@
     groups.forEach((group) => {
       const rows = group.list.querySelectorAll(".ticket-row");
       rows.forEach((row) => {
-        row.querySelector(".ticket-remove").hidden = rows.length === 1;
+        const number = row.querySelector(".ticket-number").value.trim();
+        const title = row.querySelector(".ticket-title");
+        row.querySelector(".ticket-remove").hidden = rows.length === 1 && !number && !cleanTitle(title.value);
         const complete = row.querySelector(".ticket-complete");
-        if (complete) complete.disabled = !row.querySelector(".ticket-number").value.trim();
+        if (complete) complete.disabled = !number;
+        title.title = cleanTitle(title.value);
       });
       filterRows(group);
     });
@@ -56,12 +76,12 @@
   }
 
   function changed() {
-    groups.forEach((group) => group.list.querySelectorAll(".ticket-number").forEach((input) => input.setCustomValidity("")));
+    groups.forEach((group) => group.list.querySelectorAll(".ticket-number, .ticket-title").forEach((input) => input.setCustomValidity("")));
     sync();
     form.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  function makeRow(group, value) {
+  function makeRow(group, value, titleValue = "") {
     const row = document.createElement("div");
     row.className = "ticket-row";
     const prefix = document.createElement("span");
@@ -76,9 +96,22 @@
     input.maxLength = 12;
     input.autocomplete = "off";
     input.placeholder = "Número";
-    input.value = String(value || "").replace(prefixStart, "");
+    input.value = String(value || "").trim().replace(prefixStart, "");
     input.setAttribute("aria-label", "Número do chamado " + group.label);
-    row.append(prefix, input);
+    const identity = document.createElement("div");
+    identity.className = "ticket-identity";
+    identity.append(prefix, input);
+    const title = document.createElement("input");
+    title.className = "ticket-title";
+    title.type = "text";
+    title.maxLength = 255;
+    title.autocomplete = "off";
+    title.placeholder = "Título do chamado";
+    title.value = cleanTitle(titleValue);
+    title.setAttribute("aria-label", "Título do chamado " + group.label + " (opcional)");
+    const actions = document.createElement("div");
+    actions.className = "ticket-actions";
+    row.append(identity, title, actions);
     if (group.pending) {
       const complete = document.createElement("button");
       complete.type = "button";
@@ -86,30 +119,36 @@
       complete.textContent = "✓";
       complete.title = "Mover para chamados finalizados";
       complete.setAttribute("aria-label", "Marcar chamado como finalizado");
-      row.append(complete);
+      actions.append(complete);
     }
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "ticket-remove";
     remove.textContent = "×";
     remove.setAttribute("aria-label", "Remover chamado " + group.label);
-    row.append(remove);
+    actions.append(remove);
     return row;
   }
 
-  function fill(group, values) {
+  function fill(group, values, titleMap = {}) {
     clearSearch(group);
     const fragment = document.createDocumentFragment();
-    (Array.isArray(values) && values.length ? values : [""]).forEach((value) => fragment.append(makeRow(group, value)));
+    (Array.isArray(values) && values.length ? values : [""]).forEach((value) => {
+      const key = String(value || "").trim().toUpperCase();
+      const title = titleMap && typeof titleMap[key] === "string" ? titleMap[key] : "";
+      fragment.append(makeRow(group, value, title));
+    });
     group.list.replaceChildren(fragment);
   }
 
   function validateTickets() {
     const seen = new Set();
-    groups.forEach((group) => group.list.querySelectorAll(".ticket-number").forEach((input) => input.setCustomValidity("")));
+    groups.forEach((group) => group.list.querySelectorAll(".ticket-number, .ticket-title").forEach((input) => input.setCustomValidity("")));
     for (const group of groups) {
       for (const input of group.list.querySelectorAll(".ticket-number")) {
         const number = input.value.trim();
+        const title = input.closest(".ticket-row").querySelector(".ticket-title");
+        if (!number && cleanTitle(title.value)) input.setCustomValidity("Informe o número do chamado para salvar este título.");
         if (number && !/^\d{1,12}$/.test(number)) input.setCustomValidity("Informe somente os números do chamado, com até 12 dígitos.");
         if (number && seen.has(number)) input.setCustomValidity("Este chamado já está na ficha. Use apenas uma das listas para cada chamado.");
         if (!input.checkValidity()) {
@@ -119,6 +158,15 @@
           input.reportValidity();
           return false;
         }
+        if (cleanTitle(title.value).length > 255) title.setCustomValidity("O título do chamado deve ter no máximo 255 caracteres.");
+        else if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(title.value)) title.setCustomValidity("Use um título sem caracteres de controle.");
+        if (!title.checkValidity()) {
+          clearSearch(group);
+          filterRows(group);
+          title.focus();
+          title.reportValidity();
+          return false;
+        }
         if (number) seen.add(number);
       }
     }
@@ -126,7 +174,7 @@
   }
 
   groups.forEach((group) => {
-    group.search.placeholder = "Buscar " + ticketPrefix + "-número";
+    group.search.placeholder = "Buscar número ou título";
     fill(group, []);
     group.search.addEventListener("input", (event) => {
       event.stopPropagation();
@@ -145,8 +193,11 @@
       row.querySelector(".ticket-number").focus();
     });
     group.list.addEventListener("input", () => {
-      groups.forEach((item) => item.list.querySelectorAll(".ticket-number").forEach((input) => input.setCustomValidity("")));
+      groups.forEach((item) => item.list.querySelectorAll(".ticket-number, .ticket-title").forEach((input) => input.setCustomValidity("")));
       sync();
+    });
+    group.list.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && event.target.matches(".ticket-number, .ticket-title")) event.preventDefault();
     });
     group.list.addEventListener("focusout", (event) => filterRows(group, event.relatedTarget));
     group.list.addEventListener("click", (event) => {
@@ -155,6 +206,7 @@
       const row = button.closest(".ticket-row");
       if (!row) return;
       const input = row.querySelector(".ticket-number");
+      const title = row.querySelector(".ticket-title");
       const visibleRows = Array.from(group.list.querySelectorAll(".ticket-row")).filter((item) => !item.hidden);
       const position = visibleRows.indexOf(row);
       let destination;
@@ -162,14 +214,18 @@
         if (!validateTickets() || !input.value.trim()) return;
         clearSearch(groups[0]);
         const target = Array.from(groups[0].list.querySelectorAll(".ticket-number")).find((field) => !field.value.trim());
-        if (target) { target.value = input.value.trim(); destination = target; }
+        if (target) {
+          target.value = input.value.trim();
+          target.closest(".ticket-row").querySelector(".ticket-title").value = title.value;
+          destination = target;
+        }
         else {
-          const newRow = makeRow(groups[0], input.value.trim());
+          const newRow = makeRow(groups[0], input.value.trim(), title.value);
           groups[0].list.append(newRow);
           destination = newRow.querySelector(".ticket-number");
         }
       }
-      if (group.list.querySelectorAll(".ticket-row").length === 1) { input.value = ""; clearSearch(group); }
+      if (group.list.querySelectorAll(".ticket-row").length === 1) { input.value = ""; title.value = ""; clearSearch(group); }
       else row.remove();
       changed();
       if (destination) destination.focus();
@@ -186,6 +242,7 @@
     sync();
     const data = Object.fromEntries(new FormData(form).entries());
     groups.forEach((group) => { data[group.key] = numbers(group).map((number) => ticketPrefix + "-" + number); });
+    data.chamadosTitulos = titles();
     return data;
   }
 
@@ -195,7 +252,7 @@
       const value = data && data[field.name];
       field.value = typeof value === "string" || typeof value === "number" ? String(value) : "";
     });
-    groups.forEach((group) => fill(group, data && data[group.key]));
+    groups.forEach((group) => fill(group, data && data[group.key], data && data.chamadosTitulos));
     sync();
   }
 
@@ -204,10 +261,11 @@
     const merged = global.HandoffJiraMerge.merge({
       chamadosAtendidos: numbers(groups[0]).map((number) => ticketPrefix + "-" + number),
       chamadosPendentesIds: numbers(groups[1]).map((number) => ticketPrefix + "-" + number),
+      chamadosTitulos: titles(),
     }, incoming);
     if (merged.changed) {
-      fill(groups[0], merged.chamadosAtendidos);
-      fill(groups[1], merged.chamadosPendentesIds);
+      fill(groups[0], merged.chamadosAtendidos, merged.chamadosTitulos);
+      fill(groups[1], merged.chamadosPendentesIds, merged.chamadosTitulos);
       changed();
     }
     return merged;

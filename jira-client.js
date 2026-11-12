@@ -317,13 +317,13 @@ function createJiraIntegration(options = {}) {
   }
 
   async function searchAll(session, jql, kind) {
-    const keys = new Set();
+    const keys = new Map();
     const seenTokens = new Set();
     let nextPageToken;
     let total = 0;
     for (let page = 0; page < MAX_PAGES; page++) {
       const accessToken = await ensureAccessToken(session);
-      const requestBody = { jql, fields: ["key", "status"], maxResults: 100 };
+      const requestBody = { jql, fields: ["key", "status", "summary"], maxResults: 100 };
       if (nextPageToken) requestBody.nextPageToken = nextPageToken;
       const body = await requestJson("https://api.atlassian.com/ex/jira/" + session.cloudId + "/rest/api/3/search/jql", {
         method: "POST",
@@ -338,7 +338,13 @@ function createJiraIntegration(options = {}) {
         const category = issue && issue.fields && issue.fields.status && issue.fields.status.statusCategory && issue.fields.status.statusCategory.key;
         if (!issue || typeof issue.key !== "string" || !appConfig.ticketPattern.test(issue.key) || typeof category !== "string" || !category) throw jiraError(503, "jira_upstream_unavailable", "O Jira retornou um chamado fora do projeto configurado ou sem categoria válida.");
         const done = category.toLowerCase() === "done";
-        if ((kind === "pending" && !done) || (kind === "finalized" && done)) keys.add(issue.key);
+        if ((kind === "pending" && !done) || (kind === "finalized" && done)) {
+          const summary = issue.fields.summary;
+          if (summary !== undefined && summary !== null && typeof summary !== "string") throw jiraError(503, "jira_upstream_unavailable", "O Jira retornou um título de chamado inválido.");
+          const title = typeof summary === "string" ? summary.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim() : "";
+          if (title.length > 255) throw jiraError(503, "jira_upstream_unavailable", "O Jira retornou um título de chamado maior que o limite permitido.");
+          keys.set(issue.key, title || keys.get(issue.key) || "");
+        }
       }
       if (body.isLast === true) return keys;
       if (body.nextPageToken !== undefined && body.nextPageToken !== null && typeof body.nextPageToken !== "string") throw jiraError(503, "jira_upstream_unavailable", "A paginação do Jira não pôde ser concluída.");
@@ -471,10 +477,14 @@ function createJiraIntegration(options = {}) {
         const queries = buildImportJql(body.date, appConfig);
         const [pendingSet, finalizedSet] = await Promise.all([searchAll(session, queries.pending, "pending"), searchAll(session, queries.finalized, "finalized")]);
         assertActive(session);
-        for (const key of pendingSet) finalizedSet.delete(key);
+        for (const key of pendingSet.keys()) {
+          if (!pendingSet.get(key) && finalizedSet.get(key)) pendingSet.set(key, finalizedSet.get(key));
+          finalizedSet.delete(key);
+        }
         if (pendingSet.size + finalizedSet.size > MAX_ISSUES) throw jiraError(503, "jira_result_limit", "O filtro retornou chamados demais para uma importação segura.");
-        const sortKeys = (keys) => [...keys].sort((a, b) => Number(a.slice(appConfig.ticketPrefix.length + 1)) - Number(b.slice(appConfig.ticketPrefix.length + 1)));
-        json(res, 200, { finalized: sortKeys(finalizedSet), pending: sortKeys(pendingSet), date: body.date, filterLabel: appConfig.filterLabel, fetchedAt: new Date(now()).toISOString(), timezone: "jira-profile" });
+        const sortKeys = (keys) => [...keys.keys()].sort((a, b) => Number(a.slice(appConfig.ticketPrefix.length + 1)) - Number(b.slice(appConfig.ticketPrefix.length + 1)));
+        const titles = Object.fromEntries([...finalizedSet, ...pendingSet].filter(([, title]) => title));
+        json(res, 200, { finalized: sortKeys(finalizedSet), pending: sortKeys(pendingSet), titles, date: body.date, filterLabel: appConfig.filterLabel, fetchedAt: new Date(now()).toISOString(), timezone: "jira-profile" });
       } else {
         json(res, 405, { code: "jira_method_not_allowed", error: "Esta rota não aceita a operação solicitada." });
       }

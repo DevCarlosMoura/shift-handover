@@ -223,11 +223,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .ticket-field-heading small { color: #7d8794; font-family: Consolas, "Courier New", monospace; font-size: 8px; font-weight: 400; }
 .ticket-list { display: flex; flex-direction: column; gap: 8px; max-height: 264px; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #45505e #12161c; }
 .ticket-list:focus-visible { outline: 2px solid #927f00; outline-offset: 3px; border-radius: 8px; }
-.ticket-row { display: flex; align-items: center; flex: 0 0 42px; min-height: 42px; overflow: hidden; scroll-margin-block: 8px; border: 1px solid #333a45; border-radius: 9px; background: #12161c; }
+.ticket-row { display: grid; grid-template-columns: minmax(150px,.5fr) minmax(0,1fr) auto; grid-template-areas: "identity title actions"; align-items: center; gap: 8px; padding: 7px 6px 7px 0; flex: 0 0 58px; min-height: 58px; overflow: hidden; scroll-margin-block: 8px; border: 1px solid #333a45; border-radius: 9px; background: #12161c; }
 .ticket-row[hidden] { display: none; }
 .ticket-row:focus-within { border-color: #927f00; }
 .ticket-prefix { padding-left: 12px; color: var(--yellow); font-family: Consolas, "Courier New", monospace; font-size: 11px; font-weight: 700; }
-.ticket-row .ticket-number { flex: 1; width: auto; height: 40px; padding: 0 8px; border: 0; border-radius: 0; outline: none; background: transparent; color: #e8ebef; font-size: 11px; }
+.ticket-row .ticket-number { flex: 1 1 0; width: 0; min-width: 0; height: 36px; padding: 0 8px; border: 0; border-radius: 0; outline: none; background: transparent; color: #e8ebef; font-size: 11px; }
 .ticket-row .ticket-number:focus { background: transparent; box-shadow: none; }
 .ticket-row .ticket-number::placeholder { color: #626d7a; }
 .ticket-remove { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 31px; margin-right: 5px; border: 1px solid #3a414b; border-radius: 8px; background: #1a1f26; color: #98a2ae; cursor: pointer; font-size: 17px; }
@@ -403,3 +403,27 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .jira-import-tools .ticket-hint { margin: 0; }
 @media (max-width: 520px) { .jira-import-actions .jira-button { flex: 1 1 140px; } }
 
+
+
+/* Ticket titles remain editable without expanding the whole form. */
+.ticket-identity { grid-area: identity; display: flex; align-items: center; min-width: 0; }
+.ticket-identity .ticket-prefix { flex: 0 1 auto; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ticket-row .ticket-title { grid-area: title; width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 1px solid #323c48; border-radius: 7px; outline: none; background: #181e26; color: #e8ebef; font-size: 11px; }
+.ticket-row .ticket-title::placeholder { color: #788695; }
+.ticket-row .ticket-title:focus { border-color: #927f00; box-shadow: 0 0 0 2px rgba(255,230,0,.08); }
+.ticket-actions { grid-area: actions; display: flex; align-items: center; gap: 4px; }
+.ticket-actions .ticket-remove, .ticket-actions .ticket-complete { margin-right: 0; }
+@media (max-width: 980px) {
+  .ticket-row { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "identity actions" "title title"; flex-basis: 88px; min-height: 88px; gap: 6px 8px; padding: 7px 8px; }
+  .ticket-row .ticket-number { height: 28px; }
+  .ticket-identity .ticket-prefix { padding-left: 0; }
+  .ticket-row .ticket-title { height: 32px; }
+}
+@media (max-width: 520px) { .ticket-row .ticket-title { font-size: 16px; } }
+
+/* Keep profile options reachable in shorter desktop windows. */
+@media (max-height: 700px) and (min-width: 981px) {
+  .sidebar { padding-top: 20px; padding-bottom: 14px; }
+  .sidebar-callout { display: none; }
+  .workspace-label { margin-bottom: 20px; }
+}

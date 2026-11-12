@@ -30,6 +30,27 @@
     return unique;
   }
 
+  function normalizeTitles(value, ids, label) {
+    if (value === undefined) return {};
+    if (!value || Object.prototype.toString.call(value) !== "[object Object]") throw new TypeError(label + " precisa ser um mapa de títulos.");
+    const result = {};
+    const seen = new Set();
+    for (const [rawId, title] of Object.entries(value)) {
+      const id = normalizeList([rawId], label)[0];
+      if (!ids.has(id) || seen.has(id) || typeof title !== "string") throw new TypeError(label + " contém um chamado ou título inválido.");
+      seen.add(id);
+      const normalized = title.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
+      if (normalized.length > 255) throw new TypeError("O título do chamado deve ter até 255 caracteres.");
+      if (normalized) result[id] = normalized;
+    }
+    return result;
+  }
+
+  function titlesEqual(left, right) {
+    const keys = Object.keys(left);
+    return keys.length === Object.keys(right).length && keys.every((id) => left[id] === right[id]);
+  }
+
   function arraysEqual(left, right) {
     return left.length === right.length && left.every((value, index) => value === right[index]);
   }
@@ -45,6 +66,8 @@
     const currentPending = normalizeList(current.chamadosPendentesIds, "Chamados pendentes atuais");
     const importedFinalized = normalizeList(incoming.finalized, "Chamados finalizados importados");
     const importedPending = normalizeList(incoming.pending, "Chamados pendentes importados");
+    const currentTitles = normalizeTitles(current.chamadosTitulos, new Set(currentFinalized.concat(currentPending)), "Títulos atuais");
+    const importedTitles = normalizeTitles(incoming.titles, new Set(importedFinalized.concat(importedPending)), "Títulos importados");
 
     // Pending wins if an inconsistent source includes one ID in both lists.
     const currentPendingSet = new Set(currentPending);
@@ -75,13 +98,21 @@
     const chamadosPendentesIds = pendingExistingOrder.filter((id) => nextStatus.get(id) === "pending")
       .concat(importedPending.filter((id) => !previousStatus.has(id)));
 
+    const chamadosTitulos = {};
+    for (const id of chamadosAtendidos.concat(chamadosPendentesIds)) {
+      const title = currentTitles[id] || importedTitles[id];
+      if (title) chamadosTitulos[id] = title;
+    }
+
     return {
       chamadosAtendidos,
       chamadosPendentesIds,
+      chamadosTitulos,
       added,
       moved,
       changed: !arraysEqual(chamadosAtendidos, current.chamadosAtendidos)
-        || !arraysEqual(chamadosPendentesIds, current.chamadosPendentesIds),
+        || !arraysEqual(chamadosPendentesIds, current.chamadosPendentesIds)
+        || !titlesEqual(chamadosTitulos, currentTitles),
     };
   }
 

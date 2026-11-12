@@ -245,7 +245,7 @@ async function check(name, operation) {
   await check("enhanced pagination deduplicates IDs and pending wins", async () => {
     const h = harness({ remote: (call) => {
       if (!call.url.endsWith("/search/jql")) return null;
-      assert.deepEqual(call.body.fields, ["key", "status"]);
+      assert.deepEqual(call.body.fields, ["key", "status", "summary"]);
       if (call.body.jql.includes("assignee = currentUser()")) {
         if (!call.body.nextPageToken) return response({ isLast: false, nextPageToken: "second", issues: [issue("OPS-1", "new"), issue("OPS-2", "indeterminate"), issue("OPS-1", "new")] });
         assert.equal(call.body.nextPageToken, "second");
@@ -259,8 +259,10 @@ async function check(name, operation) {
     assert.deepEqual(out.body.pending, ["OPS-1", "OPS-2", "OPS-3"]);
     assert.deepEqual(out.body.finalized, ["OPS-4"]);
     assert.equal(out.body.timezone, "jira-profile");
-    assert.equal(JSON.stringify(out.body).includes("fixture-summary"), false);
-    assert.deepEqual(Object.keys(out.body).sort(), ["date", "fetchedAt", "filterLabel", "finalized", "pending", "timezone"].sort());
+    assert.equal(Object.keys(out.body.titles).length, 4);
+    assert.equal(out.body.titles["OPS-4"], "fixture-summary-not-for-output");
+    assert.equal(Object.hasOwn(out.body.titles, "OPS-9"), false);
+    assert.deepEqual(Object.keys(out.body).sort(), ["date", "fetchedAt", "filterLabel", "finalized", "pending", "titles", "timezone"].sort());
   });
 
   await check("one failed half returns no partial import", async () => {

@@ -229,11 +229,18 @@ function previewValue(value) {
   return normalized || "—";
 }
 
+function formatTicketLabel(data, ticket, forChat = false) {
+  const value = data.chamadosTitulos && data.chamadosTitulos[ticket];
+  let title = typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim() : "";
+  if (forChat) title = title.replace(/</g, "‹").replace(/>/g, "›").replace(/[\\*_~`]/g, "\\$&");
+  return ticket + (title ? " — " + title : "");
+}
+
 function buildChatPreview(data) {
   const line = (label, value) => "* " + label + ": " + previewValue(value);
   const section = (title, value) => "*" + title + "*\n" + previewValue(value);
   const ticketLines = data.chamadosAtendidos.length
-    ? data.chamadosAtendidos.map((ticket) => "• " + ticket).join("\n")
+    ? data.chamadosAtendidos.map((ticket) => "• " + formatTicketLabel(data, ticket, true)).join("\n")
     : "—";
 
   return [
@@ -248,7 +255,7 @@ function buildChatPreview(data) {
     "",
     section("Chamados finalizados", ticketLines),
     "",
-    section("Chamados pendentes", (data.chamadosPendentesIds || []).map((ticket) => "• " + ticket).join("\n")),
+    section("Chamados pendentes", (data.chamadosPendentesIds || []).map((ticket) => "• " + formatTicketLabel(data, ticket, true)).join("\n")),
     "",
     section("Atualizações técnicas", data.atualizacaoHH),
     "",
@@ -337,8 +344,8 @@ function renderRecords() {
       ["Quantidade servida", data.quantidadeServida],
       ["Quantidade de finalizados", data.chamadosResolvidos],
       ["Chamados pendentes / em aberto", data.chamadosPendentes],
-      ["Chamados finalizados", Array.isArray(data.chamadosAtendidos) ? data.chamadosAtendidos.join(", ") : ""],
-      ["Chamados pendentes", Array.isArray(data.chamadosPendentesIds) ? data.chamadosPendentesIds.join(", ") : ""],
+      ["Chamados finalizados", Array.isArray(data.chamadosAtendidos) ? data.chamadosAtendidos.map((ticket) => formatTicketLabel(data, ticket)).join("\n") : ""],
+      ["Chamados pendentes", Array.isArray(data.chamadosPendentesIds) ? data.chamadosPendentesIds.map((ticket) => formatTicketLabel(data, ticket)).join("\n") : ""],
       ["Atualizações técnicas", data.atualizacaoHH],
       ["Serviços / processos acompanhados", data.servicosAcompanhados],
       ["Principais atividades", data.principaisAtividades],

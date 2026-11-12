@@ -6,12 +6,12 @@
     <meta name="theme-color" content="#11141a">
     <meta name="description" content="Passagem de turno com rascunhos, chamados do Jira e integração com Google Chat.">
     <title>Shift Handover</title>
-    <link rel="stylesheet" href="styles.css?v=1">
+    <link rel="stylesheet" href="styles.css?v=20261112-titles">
     <script src="runtime-config.js" defer></script>
-    <script src="jira-merge.js" defer></script>
-    <script src="form-state.js?v=1" defer></script>
+    <script src="jira-merge.js?v=20261112-titles" defer></script>
+    <script src="form-state.js?v=20261112-titles" defer></script>
     <script src="draft-reference.js?v=1" defer></script>
-    <script src="app.js?v=1" defer></script>
+    <script src="app.js?v=20261112-titles" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -117,24 +117,24 @@
                   <button class="jira-button jira-import-button" id="import-jira" type="button" disabled>↓ Importar do Jira</button>
                   <button class="jira-disconnect" id="disconnect-jira" type="button" hidden>Desconectar</button>
                 </div>
-                <p class="ticket-hint">Pendentes atuais e finalizados na data da ficha, no horário do perfil Jira. Os números ficam em um rascunho para revisão.</p>
+                <p class="ticket-hint">Pendentes atuais e finalizados na data da ficha, no horário do perfil Jira. Os números e títulos ficam em um rascunho para revisão.</p>
               </div>
               <div class="ticket-groups">
                 <div class="ticket-field">
                   <div class="ticket-field-heading"><span id="ticket-heading">Chamados finalizados</span><span class="ticket-count" id="ticket-count">0</span></div>
-                  <label class="ticket-search"><span>Buscar nos finalizados</span><input id="ticket-search" type="search" placeholder="Buscar por número" autocomplete="off" spellcheck="false" aria-controls="ticket-list"></label>
+                  <label class="ticket-search"><span>Buscar nos finalizados</span><input id="ticket-search" type="search" placeholder="Buscar número ou título" autocomplete="off" spellcheck="false" aria-controls="ticket-list"></label>
                   <div class="ticket-list" id="ticket-list" role="group" aria-labelledby="ticket-heading" aria-describedby="ticket-results" tabindex="0"></div>
                   <p class="ticket-filter-empty" id="ticket-empty" hidden>Nenhum chamado corresponde à busca.</p>
                   <div class="ticket-list-footer"><p class="ticket-results" id="ticket-results" role="status" aria-live="polite"></p><button class="add-ticket" id="add-ticket" type="button"><span>＋</span> Adicionar finalizado</button></div>
-                  <p class="ticket-hint">Registre os chamados concluídos durante o turno.</p>
+                  <p class="ticket-hint">Inclua o número e, se desejar, o título do chamado.</p>
                 </div>
                 <div class="ticket-field">
                   <div class="ticket-field-heading"><span id="pending-ticket-heading">Chamados pendentes</span><span class="ticket-count" id="pending-ticket-count">0</span></div>
-                  <label class="ticket-search"><span>Buscar nos pendentes</span><input id="pending-ticket-search" type="search" placeholder="Buscar por número" autocomplete="off" spellcheck="false" aria-controls="pending-ticket-list"></label>
+                  <label class="ticket-search"><span>Buscar nos pendentes</span><input id="pending-ticket-search" type="search" placeholder="Buscar número ou título" autocomplete="off" spellcheck="false" aria-controls="pending-ticket-list"></label>
                   <div class="ticket-list" id="pending-ticket-list" role="group" aria-labelledby="pending-ticket-heading" aria-describedby="pending-ticket-results" tabindex="0"></div>
                   <p class="ticket-filter-empty" id="pending-ticket-empty" hidden>Nenhum chamado corresponde à busca.</p>
                   <div class="ticket-list-footer"><p class="ticket-results" id="pending-ticket-results" role="status" aria-live="polite"></p><button class="add-ticket" id="add-pending-ticket" type="button"><span>＋</span> Adicionar pendente</button></div>
-                  <p class="ticket-hint">Use ✓ para mover um chamado resolvido para finalizados.</p>
+                  <p class="ticket-hint">Use ✓ para finalizar. O título acompanha o chamado.</p>
                 </div>
               </div>
             </section>

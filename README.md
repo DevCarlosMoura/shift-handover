@@ -1,6 +1,6 @@
 # Shift Handover
 
-Aplicação de passagem de turno com formulário, rascunhos, histórico, importação do Jira Cloud e envio opcional ao Google Chat. Interface em português, tema escuro e listas compactas com busca para centenas de chamados.
+Aplicação de passagem de turno com formulário, rascunhos, histórico, importação do Jira Cloud e envio opcional ao Google Chat. Interface em português, tema escuro e listas compactas com busca por número ou título para centenas de chamados.
 
 Esta distribuição começa vazia. Não contém contas, chamados, filtros privados, credenciais, sessões, histórico, backups ou identidade visual de uma organização. Cada instalação configura seus próprios serviços.
 
@@ -44,7 +44,9 @@ npm run configure -- --jira
 npm start
 ```
 
-As buscas retornam pendentes atuais atribuídos à conta conectada e chamados resolvidos por essa conta na data escolhida, conforme o fuso do perfil Jira. Usam campos padrão de resolução; workflows que não preenchem resolução precisam ser adaptados. A importação lê somente IDs/status, combina as listas manuais e salva um rascunho; não envia a passagem ao Chat.
+As buscas retornam pendentes atuais atribuídos à conta conectada e chamados resolvidos por essa conta na data escolhida, conforme o fuso do perfil Jira. Usam campos padrão de resolução; workflows que não preenchem resolução precisam ser adaptados. A importação lê número, status e título, combina as listas manuais e salva um rascunho; não envia a passagem ao Chat.
+
+Cada chamado tem um título opcional de até 255 caracteres, editável ao lado do número. A importação preenche títulos vazios e preserva os já preenchidos manualmente. Ao mover um pendente para finalizado, o título acompanha o número. Rascunhos, histórico e mensagem mantêm a associação; a busca filtra também pelo título. Registros antigos sem título continuam funcionando. Os arrays de IDs do contrato HTTP permanecem iguais; os títulos usam o mapa opcional `chamadosTitulos` por ID.
 
 O filtro base padrão é `project = "OPS"` para esse exemplo. Use `JIRA_BASE_JQL` para acrescentar condições próprias, **sem ORDER BY**, mantendo apenas o projeto configurado. Esse filtro fica no servidor e não é exposto na configuração pública.
 
